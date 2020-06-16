@@ -18,7 +18,7 @@ function chainBitArrayTypeTests() {
         bitArray.assignBit(bit, (bit % 2) & 1);
     }
     e = performance.now();
-    outputPre.innerHTML += `                 Assignment of ${bitArray.size} bits took:` +
+    outputPre.innerHTML += `                Assignment of ${bitArray.size} bits took:` +
         `${(e - s).toString().padStart(5)}ms\n`;
 
     s = performance.now();
@@ -40,7 +40,8 @@ function chainBitArrayTypeTests() {
     outputPre.innerHTML += '                          Individual tests:\n';
     let individualBits = 50;
     function printBits(what) {
-        outputPre.innerHTML += `${what}: ` + bitArray.toString(individualBits) + '\n';
+        //bitArray.toString(20, individualBits)
+        outputPre.innerHTML += `${what}: ` + bitArray.toString(0, individualBits) + '\n';
     }
     printBits('           (bit % 2) & 1');
     for (let bit = 0; bit < individualBits; ++bit) {
@@ -90,6 +91,7 @@ function chainBitArrayTypeTests() {
         testBitArray.assignBit(bit, (bit % 5) & 1);
     }
     function printTestBits(printMe, what) {
+        //printMe.toDelimitedString(',', 5, 10)
         outputPre.innerHTML += `${what}: ` + printMe.toDelimitedString(',') + '\n';
     }
     printTestBits(testBitArray, 'Original');

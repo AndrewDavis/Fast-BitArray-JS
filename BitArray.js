@@ -142,17 +142,17 @@ class BitArray {
         return this.array.length;
     }
 
-    toString(upTo = this.size) {
+    toString(startAt = 0, upTo = this.size) {
         let str = '';
-        for (let bit = 0; bit < upTo; ++bit) {
+        for (let bit = startAt; bit < upTo; ++bit) {
             str += (this.array[~~(bit / this.arrayBitSize)] & (1 << (bit % this.arrayBitSize))) != 0 ? '1' : '0';
         }
         return str;
     }
 
-    toDelimitedString(delimiter, upTo = this.size) {
-        let str = (this.array[~~(0 / this.arrayBitSize)] & (1 << (0 % this.arrayBitSize))) != 0 ? '1' : '0';
-        for (let bit = 1; bit < upTo; ++bit) {
+    toDelimitedString(delimiter, startAt = 0, upTo = this.size) {
+        let str = (this.array[~~(startAt / this.arrayBitSize)] & (1 << (startAt % this.arrayBitSize))) != 0 ? '1' : '0';
+        for (let bit = startAt + 1; bit < upTo; ++bit) {
             str += delimiter +
                 ((this.array[~~(bit / this.arrayBitSize)] & (1 << (bit % this.arrayBitSize))) != 0 ? '1' : '0');
         }
