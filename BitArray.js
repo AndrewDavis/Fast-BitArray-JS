@@ -2,50 +2,86 @@
 
 //Code published to: https://github.com/AndrewDavis/Fast-BitArray-JS
 
+window.ByteBitSize = 8;
+
+//Note: No 64-bit options allowed, because JS can't handle bit operations > 32 bits!
+//Note: Array and Float32Array were both removed, because they function differently than Ints and Uints.
+window.BitArrayTypes = [
+    //8.
+    Int8Array,
+    Uint8Array,
+    Uint8ClampedArray,
+
+    //16.
+    Int16Array,
+    Uint16Array,
+
+    //32.
+    Int32Array,
+    Uint32Array
+];
+//Overall fastest; only slower than the others for creation of very large numbers of bits.
+window.DefaultBitArrayType = Int8Array;
+
 class BitArray {
-    constructor(uints) {
-        this.uints = uints;
+    //Use BitArray.create() for regular usage.
+    constructor(bitSize, array, arrayType) {
+        this.size = bitSize;
+        this.array = array;
+        //It is assumed that what is provided is correct; otherwise, problems will arise when cloning or resizing.
+        this.arrayType = arrayType;
+
+        //Varies depending on which array type is utilized.
+        this.arrayByteSize = this.array.BYTES_PER_ELEMENT;
+        this.arrayBitSize = this.arrayByteSize * ByteBitSize;
     }
 
-    static create(bitSize = 0) {
-        return new BitArray(new Uint32Array(~~(bitSize / 32)));
+    //See BitArrayTypes for arrayType options.
+    static create(bitSize = 0, arrayType = DefaultBitArrayType) {
+        return new BitArray(bitSize, new arrayType(Math.ceil(bitSize / (arrayType.BYTES_PER_ELEMENT * ByteBitSize))),
+            arrayType);
     }
 
     clone() {
-        return new BitArray(this.uints.slice(0, Math.ceil(this.size / 32)));
+        return new BitArray(this.size, this.array.slice(0, Math.ceil(this.size / this.arrayBitSize)), this.arrayType);
     }
 
     resizeClone(newBitSize) {
         if (newBitSize <= this.size) {
-            return new BitArray(this.uints.slice(0, Math.ceil(newBitSize / 32)));
+            return new BitArray(newBitSize, this.array.slice(0, Math.ceil(newBitSize / this.arrayBitSize)),
+                this.arrayType);
         } else {
-            let cloned = new BitArray(new Uint32Array(~~(newBitSize / 32)));
-            cloned.uints.set(this.uints);
+            let cloned = new BitArray(newBitSize, new this.arrayType(Math.ceil(newBitSize / this.arrayBitSize)),
+                this.arrayType);
+            cloned.array.set(this.array);
             return cloned;
         }
     }
 
+    //Assumes the same underlying array type.
     static combineAND(me, withMe) {
         let size = Math.min(me.size, withMe.size);
-        let combined = BitArray.create(size);
+        let combined = BitArray.create(size, me.arrayType);
         for (let bit = 0; bit < size; ++bit) {
             combined.assignBit(bit, me.getBit(bit) & withMe.getBit(bit));
         }
         return combined;
     }
 
+    //Assumes the same underlying array type.
     static combineOR(me, withMe) {
         let size = Math.min(me.size, withMe.size);
-        let combined = BitArray.create(size);
+        let combined = BitArray.create(size, me.arrayType);
         for (let bit = 0; bit < size; ++bit) {
             combined.assignBit(bit, me.getBit(bit) | withMe.getBit(bit));
         }
         return combined;
     }
 
+    //Assumes the same underlying array type.
     static combineXOR(me, withMe) {
         let size = Math.min(me.size, withMe.size);
-        let combined = BitArray.create(size);
+        let combined = BitArray.create(size, me.arrayType);
         for (let bit = 0; bit < size; ++bit) {
             combined.assignBit(bit, me.getBit(bit) ^ withMe.getBit(bit));
         }
@@ -53,68 +89,74 @@ class BitArray {
     }
 
     getBit(bit) {
-        return (this.uints[~~(bit / 32)] & (1 << (bit % 32))) != 0 ? 1 : 0;
+        return (this.array[~~(bit / this.arrayBitSize)] & (1 << (bit % this.arrayBitSize))) != 0 ? 1 : 0;
     }
 
     setBit(bit) {
-        this.uints[~~(bit / 32)] |= (1 << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] |= (1 << (bit % this.arrayBitSize));
     }
 
     clearBit(bit) {
-        this.uints[~~(bit / 32)] &= ~(1 << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] &= ~(1 << (bit % this.arrayBitSize));
     }
 
     assignBit(bit, value) {
         if (value) {
-            this.uints[~~(bit / 32)] |= (1 << (bit % 32));
+            this.array[~~(bit / this.arrayBitSize)] |= (1 << (bit % this.arrayBitSize));
         } else {
-            this.uints[~~(bit / 32)] &= ~(1 << (bit % 32));
+            this.array[~~(bit / this.arrayBitSize)] &= ~(1 << (bit % this.arrayBitSize));
         }
     }
 
     toggleBit(bit) {
-        this.uints[~~(bit / 32)] ^= (1 << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] ^= (1 << (bit % this.arrayBitSize));
     }
 
     andBit(bit, value) {
-        this.uints[~~(bit / 32)] &= (value << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] &= (value << (bit % this.arrayBitSize));
     }
 
     orBit(bit, value) {
-        this.uints[~~(bit / 32)] |= (value << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] |= (value << (bit % this.arrayBitSize));
     }
 
     xorBit(bit, value) {
-        this.uints[~~(bit / 32)] ^= (value << (bit % 32));
+        this.array[~~(bit / this.arrayBitSize)] ^= (value << (bit % this.arrayBitSize));
     }
 
     toggleAllBits() {
-        let size = this.size;
-        for (let bit = 0; bit < size; ++bit) {
+        for (let bit = 0; bit < this.size; ++bit) {
             this.toggleBit(bit);
         }
     }
 
-    get size() {
-        return this.uints.length * 32;
+    get rawBitSize() {
+        return this.array.length * this.arrayBitSize;
     }
 
-    get byteSize() {
-        return this.uints.length * 4;
+    get rawByteSize() {
+        return this.array.length * this.arrayByteSize;
     }
 
-    get uintSize() {
-        return this.uints.length;
+    get rawArraySize() {
+        return this.array.length;
     }
 
-    //Warning: You may want to Math.ceil() the returned value!
-    static bitsToBytes(bits) {
-        return bits / 8;
+    toString(upTo = this.size) {
+        let str = '';
+        for (let bit = 0; bit < upTo; ++bit) {
+            str += (this.array[~~(bit / this.arrayBitSize)] & (1 << (bit % this.arrayBitSize))) != 0 ? '1' : '0';
+        }
+        return str;
     }
 
-    //Warning: You may want to Math.ceil() the returned value!
-    static bitsToUints(bits) {
-        return bits / 32;
+    toDelimitedString(delimiter, upTo = this.size) {
+        let str = (this.array[~~(0 / this.arrayBitSize)] & (1 << (0 % this.arrayBitSize))) != 0 ? '1' : '0';
+        for (let bit = 1; bit < upTo; ++bit) {
+            str += delimiter +
+                ((this.array[~~(bit / this.arrayBitSize)] & (1 << (bit % this.arrayBitSize))) != 0 ? '1' : '0');
+        }
+        return str;
     }
 }
 

@@ -1,61 +1,69 @@
 window.onload = function() {
-    window.outputPre = document.getElementById('outputPre');
+    window.bitArrayTypeIndex = 0;
+    chainBitArrayTypeTests();
+};
+
+function chainBitArrayTypeTests() {
+    let outputPre = document.body.appendChild(document.createElement('pre'));
+
+    window.bitArrayType = BitArrayTypes[bitArrayTypeIndex];
+    outputPre.innerHTML += `Current bit array type: ${bitArrayType.name}\n\n`;
 
     overallS = performance.now();
 
     //Create.
-    window.bitArray = BitArray.create(1e8);
+    window.bitArray = BitArray.create(1e8, bitArrayType);
     s = performance.now();
     for (let bit = 0; bit < 1e8; ++bit) {
         bitArray.assignBit(bit, (bit % 2) & 1);
     }
     e = performance.now();
-    outputPre.innerHTML += `                     Assignment of ${bitArray.size} bits took: ${e - s}ms\n`;
+    outputPre.innerHTML += `                 Assignment of ${bitArray.size} bits took:` +
+        `${(e - s).toString().padStart(5)}ms\n`;
 
     s = performance.now();
     {
-        for (let x = 0; x < 1e6; ++x) {
-            window.createDelete = new BitArray(1e8);
+        for (let x = 0; x < 1e3; ++x) {
+            window.createDelete = BitArray.create(1e6, bitArrayType);
         }
     }
     e = performance.now();
-    outputPre.innerHTML += `Creation and deletion of 1000000 X ${bitArray.size} bits took: ${e - s}ms\n\n`;
+    outputPre.innerHTML += `Creation and deletion of 1000 X 1000000 bits took:` +
+        `${(e - s).toString().padStart(5)}ms\n\n`;
 
-    outputPre.innerHTML += ` Size in bits: ${bitArray.size}`;
-    outputPre.innerHTML += `\nSize in bytes:  ${bitArray.byteSize}`;
-    outputPre.innerHTML += `\nSize in uints:   ${bitArray.uintSize}\n\n`;
+    outputPre.innerHTML += `      Size in bits: ${bitArray.size.toString().padStart(9)}`;
+    outputPre.innerHTML += `\n  Raw size in bits: ${bitArray.rawBitSize.toString().padStart(9)}`;
+    outputPre.innerHTML += `\n Raw size in bytes: ${bitArray.rawByteSize.toString().padStart(9)}`;
+    outputPre.innerHTML += `\nRaw size in arrays: ${bitArray.rawArraySize.toString().padStart(9)}\n\n`;
 
     //Individual tests.
     outputPre.innerHTML += '                          Individual tests:\n';
+    let individualBits = 50;
     function printBits(what) {
-        let str = '';
-        for (let bit = 0; bit < 50; ++bit) {
-            str += bitArray.getBit(bit);
-        }
-        outputPre.innerHTML += `${what}: ${str}\n`;
+        outputPre.innerHTML += `${what}: ` + bitArray.toString(individualBits) + '\n';
     }
     printBits('           (bit % 2) & 1');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.clearBit(bit);
     }
     printBits('                 cleared');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.assignBit(bit, (bit % 3) & 1);
     }
     printBits('           (bit % 3) & 1');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.toggleBit(bit);
     }
     printBits('                 toggled');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.andBit(bit, 0);
     }
     printBits('            ANDed with 0');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.orBit(bit, (bit % 7) & 1);
     }
     printBits(' ORed with (bit % 7) & 1');
-    for (let bit = 0; bit < 50; ++bit) {
+    for (let bit = 0; bit < individualBits; ++bit) {
         bitArray.xorBit(bit, (bit % 2) & 1);
     }
     printBits('XORed with (bit % 2) & 1');
@@ -76,20 +84,17 @@ window.onload = function() {
 
     //Aggregate tests.
     outputPre.innerHTML += '\n\n          Aggregate tests:\n';
-    window.testBitArray = BitArray.create(50);
+    let aggregateBits = 25;
+    window.testBitArray = BitArray.create(aggregateBits, bitArrayType);
     for (let bit = 0; bit < testBitArray.size; ++bit) {
         testBitArray.assignBit(bit, (bit % 5) & 1);
     }
     function printTestBits(printMe, what) {
-        let str = '';
-        for (let bit = 0; bit < printMe.size; ++bit) {
-            str += printMe.getBit(bit);
-        }
-        outputPre.innerHTML += `${what}: ${str}\n`;
+        outputPre.innerHTML += `${what}: ` + printMe.toDelimitedString(',') + '\n';
     }
     printTestBits(testBitArray, 'Original');
-    outputPre.innerHTML += '------------------------------------------\n';
-    outputPre.innerHTML += '------------------------------------------\n';
+    outputPre.innerHTML += '-----------------------------------------------------------\n';
+    outputPre.innerHTML += '-----------------------------------------------------------\n';
     window.otherTestBitArray = testBitArray.clone();
     testBitArray.toggleAllBits();
     printTestBits(testBitArray, ' Toggled');
@@ -100,16 +105,25 @@ window.onload = function() {
         otherTestBitArray.clearBit(bit);
     }
     printTestBits(otherTestBitArray, '   Other');
-    outputPre.innerHTML += '------------------------------------------\n';
+    outputPre.innerHTML += '-----------------------------------------------------------\n';
     window.anded = BitArray.combineAND(testBitArray, otherTestBitArray);
     printTestBits(anded, '   ANDed');
-    outputPre.innerHTML += '------------------------------------------\n';
+    outputPre.innerHTML += '-----------------------------------------------------------\n';
     window.ored = BitArray.combineOR(testBitArray, otherTestBitArray);
     printTestBits(ored, '    ORed');
-    outputPre.innerHTML += '------------------------------------------\n';
+    outputPre.innerHTML += '-----------------------------------------------------------\n';
     window.xored = BitArray.combineXOR(testBitArray, otherTestBitArray);
     printTestBits(xored, '   XORed');
 
     overallE = performance.now();
-    outputPre.innerHTML += `\n\nTime it took to do ALL of the above: ${overallE - overallS}ms`;
-};
+    outputPre.innerHTML += `\n\nTime it took to do all of the above: ${(overallE - overallS).toString().padStart(5)}ms`;
+
+    outputPre.innerHTML += '\n\n-----------------------------------------------------------\n\n';
+
+    ++bitArrayTypeIndex;
+    if (bitArrayTypeIndex < BitArrayTypes.length) {
+        //Space each bit array type test out a little bit, to allow the output to flush.
+        setTimeout(chainBitArrayTypeTests, 50);
+    }
+    window.scrollTo(0, document.body.scrollHeight);
+}
